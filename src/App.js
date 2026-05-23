@@ -98,42 +98,54 @@ export default function App() {
   /* ── Firebase auth listener ─────────────────────────── */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
-      userRef.current = u;
-      setUser(u);
-      if (u) {
-        const data = await getUserData(u.uid);
+      try {
+        userRef.current = u;
+        setUser(u);
+        if (u) {
+          const data = await getUserData(u.uid);
 
-        if (data === null) {
-          // 첫 로그인: localStorage 데이터를 Firestore로 마이그레이션
-          const localClasses  = (() => { try { return JSON.parse(localStorage.getItem('dju_classes'))   || [];  } catch { return [];  } })();
-          const localMemos    = (() => { try { return JSON.parse(localStorage.getItem('dju_memos'))     || [];  } catch { return [];  } })();
-          const localPortfolio = (() => { try { return JSON.parse(localStorage.getItem('dju_portfolio')) || {};  } catch { return {};  } })();
+          if (data === null) {
+            // 첫 로그인: localStorage 데이터를 Firestore로 마이그레이션
+            const localClasses   = (() => { try { return JSON.parse(localStorage.getItem('dju_classes'))   || []; } catch { return []; } })();
+            const localMemos     = (() => { try { return JSON.parse(localStorage.getItem('dju_memos'))     || []; } catch { return []; } })();
+            const localPortfolio = (() => { try { return JSON.parse(localStorage.getItem('dju_portfolio')) || {}; } catch { return {}; } })();
 
-          await setUserData(u.uid, {
-            name:      u.displayName || '',
-            classes:   localClasses,
-            memos:     localMemos,
-            portfolio: localPortfolio,
-          });
+            try {
+              await setUserData(u.uid, {
+                name:      u.displayName || '',
+                classes:   localClasses,
+                memos:     localMemos,
+                portfolio: localPortfolio,
+              });
+              // Firestore 저장 성공 시에만 localStorage 삭제
+              localStorage.removeItem('dju_classes');
+              localStorage.removeItem('dju_memos');
+              localStorage.removeItem('dju_portfolio');
 
-          setClasses(localClasses);
-          localStorage.removeItem('dju_classes');
-          localStorage.removeItem('dju_memos');
-          localStorage.removeItem('dju_portfolio');
+              const hasMigrated =
+                localClasses.length > 0 || localMemos.length > 0 ||
+                Object.keys(localPortfolio).some(k => {
+                  const v = localPortfolio[k];
+                  return Array.isArray(v) ? v.length > 0
+                    : (v && typeof v === 'object' ? Object.values(v).some(Boolean) : Boolean(v));
+                });
+              if (hasMigrated) setMigrationBanner(true);
+            } catch (e) {
+              console.error('Firestore 마이그레이션 실패 (localStorage 유지):', e);
+            }
 
-          const hasMigrated = localClasses.length > 0 || localMemos.length > 0 ||
-            Object.keys(localPortfolio).some(k => {
-              const v = localPortfolio[k];
-              return Array.isArray(v) ? v.length > 0 : (v && typeof v === 'object' ? Object.values(v).some(Boolean) : Boolean(v));
-            });
-          if (hasMigrated) setMigrationBanner(true);
-
-        } else {
-          // 기존 사용자: Firestore 데이터 사용
-          if (data.classes != null) setClasses(data.classes);
+            setClasses(localClasses);
+          } else {
+            // 기존 사용자: Firestore 데이터 사용
+            if (data.classes != null) setClasses(data.classes);
+          }
         }
+      } catch (e) {
+        console.error('Auth 상태 처리 오류:', e);
+      } finally {
+        // 오류가 발생해도 반드시 로딩 해제
+        setAuthLoading(false);
       }
-      setAuthLoading(false);
     });
     return unsub;
   }, []);
@@ -214,6 +226,7 @@ export default function App() {
             <span className="text-white text-xl font-bold">D</span>
           </div>
           <span className="w-6 h-6 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+          <p className="text-xs text-gray-400">로그인 상태 확인 중…</p>
         </div>
       </div>
     );
