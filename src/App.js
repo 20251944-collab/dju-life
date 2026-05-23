@@ -8,6 +8,7 @@ import {
 import { auth, getUserData, setUserData } from './firebase';
 import Sidebar from './components/Sidebar';
 import BottomTabBar from './components/BottomTabBar';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import Home from './pages/Home';
 import Timetable from './pages/Timetable';
 import CampusMap from './pages/CampusMap';
@@ -267,6 +268,7 @@ export default function App() {
       </main>
 
       <BottomTabBar active={page} onChange={setPage} />
+      <PWAInstallPrompt />
 
 {notifBanner && (
         <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 bg-yellow-50 border border-yellow-200 rounded-2xl shadow-lg px-4 py-3 flex items-start gap-3">
