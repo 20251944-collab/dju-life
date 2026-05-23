@@ -83,12 +83,7 @@ const SECTION_META = [
   },
 ];
 
-const FREE_MODELS = [
-  'google/gemma-3-4b-it:free',
-  'microsoft/phi-4-reasoning:free',
-  'meta-llama/llama-3.2-3b-instruct:free',
-  'mistralai/mistral-small-3.1-24b-instruct:free',
-];
+const MODEL = 'openrouter/auto';
 
 function loadData() {
   try {
@@ -262,7 +257,6 @@ export default function Portfolio({ user }) {
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
-  const [aiModel, setAiModel] = useState('');
   const [copied, setCopied] = useState(false);
 
   useEffect(() => { userRef.current = user; }, [user]);
@@ -303,60 +297,36 @@ export default function Portfolio({ user }) {
     setAiLoading(true);
     setAiError('');
     setAiText('');
-    setAiModel('');
     setShowAI(true);
 
-    const prompt = buildPrompt(data);
-    let lastError = '알 수 없는 오류';
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'DJU Life Portfolio',
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: [{ role: 'user', content: buildPrompt(data) }],
+          max_tokens: 1500,
+        }),
+      });
 
-    for (const model of FREE_MODELS) {
-      setAiModel(model);
-      try {
-        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': window.location.origin,
-            'X-Title': 'DJU Life Portfolio',
-          },
-          body: JSON.stringify({
-            model,
-            messages: [{ role: 'user', content: prompt }],
-            max_tokens: 1500,
-          }),
-        });
+      const json = await res.json().catch(() => ({}));
+      if (json?.error) throw new Error(json.error.message || 'API 오류');
+      if (!res.ok) throw new Error(`서버 오류 (${res.status})`);
 
-        const json = await res.json().catch(() => ({}));
-
-        // OpenRouter may return 200 but with an error body (e.g. "Provider returned error")
-        if (json?.error) {
-          lastError = json.error.message || JSON.stringify(json.error);
-          continue;
-        }
-        if (!res.ok) {
-          lastError = `서버 오류 (${res.status})`;
-          continue;
-        }
-
-        const text = json.choices?.[0]?.message?.content;
-        if (!text) {
-          lastError = '응답이 비어있습니다.';
-          continue;
-        }
-
-        setAiText(text.trim());
-        setAiLoading(false);
-        return;
-      } catch (err) {
-        lastError = err.message;
-        // network error — try next model
-      }
+      const text = json.choices?.[0]?.message?.content;
+      if (!text) throw new Error('응답이 비어있습니다.');
+      setAiText(text.trim());
+    } catch (err) {
+      setAiError(`생성에 실패했습니다.\n${err.message}\n\n잠시 후 다시 시도해주세요.`);
+    } finally {
+      setAiLoading(false);
     }
-
-    // All models exhausted
-    setAiError(`모든 모델에서 생성에 실패했습니다.\n마지막 오류: ${lastError}\n\n잠시 후 다시 시도해주세요.`);
-    setAiLoading(false);
   }
 
   function handleCopy() {
@@ -527,11 +497,7 @@ export default function Portfolio({ user }) {
                 <div className="w-9 h-9 border-[3px] border-purple-200 border-t-purple-600 rounded-full animate-spin" />
                 <p className="text-sm text-gray-500 text-center leading-relaxed">
                   AI가 포트폴리오를 작성하고 있습니다…<br />
-                  {aiModel && (
-                    <span className="text-xs text-gray-400">
-                      {aiModel.split('/')[1]?.replace(':free', '')} 시도 중
-                    </span>
-                  )}
+                  <span className="text-xs text-gray-400">잠시만 기다려 주세요.</span>
                 </p>
               </div>
             )}

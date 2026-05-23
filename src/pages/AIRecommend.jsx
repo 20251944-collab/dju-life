@@ -27,30 +27,7 @@ const TAG_COLORS = {
   음성:   'bg-pink-100 text-pink-700',
 };
 
-const MODELS = [
-  'deepseek/deepseek-v4-flash:free',
-  'deepseek/deepseek-chat-v3-0324',
-];
-
-async function callModel(model, messages, apiKey) {
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-      'HTTP-Referer': window.location.origin,
-      'X-Title': 'DJU Life',
-    },
-    body: JSON.stringify({ model, messages, temperature: 0.7 }),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const err = new Error(body?.error?.message || `API 오류 (${res.status})`);
-    err.status = res.status;
-    throw err;
-  }
-  return res.json();
-}
+const MODEL = 'openrouter/auto';
 
 async function fetchRecommendations(taskType, content) {
   const apiKey = process.env.REACT_APP_OPENROUTER_API_KEY;
@@ -66,21 +43,25 @@ async function fetchRecommendations(taskType, content) {
     { role: 'user', content: `과제 유형: ${TASK_LABELS[taskType]}\n과제 내용: ${content}` },
   ];
 
-  let lastError;
-  for (const model of MODELS) {
-    try {
-      const data = await callModel(model, messages, apiKey);
-      const text = data.choices?.[0]?.message?.content ?? '';
-      const match = text.match(/\[[\s\S]*\]/);
-      if (!match) throw new Error('응답 형식을 파싱할 수 없습니다. 다시 시도해주세요.');
-      return JSON.parse(match[0]);
-    } catch (e) {
-      lastError = e;
-      // 402(크레딧 고갈), 429(속도 제한), 5xx(서버 오류)만 다음 모델로 폴백
-      if (![402, 429, 500, 502, 503].includes(e.status)) throw e;
-    }
-  }
-  throw lastError;
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+      'HTTP-Referer': window.location.origin,
+      'X-Title': 'DJU Life',
+    },
+    body: JSON.stringify({ model: MODEL, messages, temperature: 0.7 }),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (json?.error) throw new Error(json.error.message || `API 오류`);
+  if (!res.ok) throw new Error(`API 오류 (${res.status})`);
+
+  const text = json.choices?.[0]?.message?.content ?? '';
+  const match = text.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error('응답 형식을 파싱할 수 없습니다. 다시 시도해주세요.');
+  return JSON.parse(match[0]);
 }
 
 function ToolCard({ tool, index }) {
