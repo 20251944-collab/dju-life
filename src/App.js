@@ -234,8 +234,25 @@ export default function App() {
       />
 
       <main className="md:ml-40 min-h-screen pb-16 md:pb-0">
-        <div className="md:hidden bg-navy sticky top-0 z-30 flex items-center px-4 h-12">
+        <div className="md:hidden bg-navy sticky top-0 z-30 flex items-center px-4 h-12 gap-1">
           <span className="flex-1 text-sm font-bold text-white">{PAGE_TITLES[page]}</span>
+          <button
+            onClick={() => setPage('memo')}
+            className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center text-lg hover:bg-white/25 transition-colors"
+            aria-label="메모"
+          >
+            ✎
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center hover:bg-white/25 transition-colors overflow-hidden"
+            aria-label="로그아웃"
+          >
+            {user.photoURL
+              ? <img src={user.photoURL} alt="" className="w-9 h-9 rounded-full object-cover" referrerPolicy="no-referrer" />
+              : <span className="text-base">👤</span>
+            }
+          </button>
         </div>
         {renderPage()}
       </main>
@@ -255,7 +272,7 @@ export default function App() {
 
       <button
         onClick={() => setPage('memo')}
-        className="fixed top-3 right-4 z-50 w-10 h-10 rounded-full bg-navy text-white shadow-lg flex items-center justify-center text-lg hover:opacity-90 transition-opacity"
+        className="hidden md:flex fixed top-3 right-4 z-50 w-10 h-10 rounded-full bg-navy text-white shadow-lg items-center justify-center text-lg hover:opacity-90 transition-opacity"
         aria-label="메모"
       >
         ✎
