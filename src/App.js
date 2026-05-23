@@ -102,8 +102,15 @@ export default function App() {
         setUser(u);
         if (u) {
           const data = await getUserData(u.uid);
-
-          if (data?.classes != null) setClasses(data.classes);
+          if (data?.classes != null) {
+            setClasses(data.classes);
+          } else {
+            // Firestore 문서 없음 — localStorage 데이터를 초기 시드로 업로드
+            const local = (() => {
+              try { return JSON.parse(localStorage.getItem('dju_classes')) || []; } catch { return []; }
+            })();
+            if (local.length > 0) setUserData(u.uid, { classes: local }).catch(() => {});
+          }
         }
       } catch (e) {
         console.error('Auth 상태 처리 오류:', e);

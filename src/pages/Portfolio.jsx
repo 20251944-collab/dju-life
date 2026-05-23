@@ -251,6 +251,7 @@ export default function Portfolio({ user }) {
   const [formData, setFormData] = useState({});
   const [editId, setEditId] = useState(null);
   const userRef = useRef(null);
+  const firestoreReady = useRef(false);
 
   // AI generation state
   const [showAI, setShowAI] = useState(false);
@@ -264,19 +265,27 @@ export default function Portfolio({ user }) {
   // Load from Firestore when user logs in
   useEffect(() => {
     if (!user) return;
+    firestoreReady.current = false;
     getUserData(user.uid).then(fsData => {
       if (fsData?.portfolio && Object.keys(fsData.portfolio).length > 0) {
         const merged = { ...DEFAULTS, ...fsData.portfolio };
         setData(merged);
         localStorage.setItem(KEY, JSON.stringify(merged));
+      } else {
+        // Firestore 문서 없음 — localStorage 데이터를 초기 시드로 업로드
+        const localData = loadData();
+        const hasData = SECTION_META.some(m => localData[m.key]?.length > 0) ||
+                        Object.values(localData.jobTarget).some(Boolean);
+        if (hasData) setUserData(user.uid, { portfolio: localData }).catch(() => {});
       }
+      firestoreReady.current = true;
     });
   }, [user]);
 
   // Save to localStorage + Firestore
   useEffect(() => {
     localStorage.setItem(KEY, JSON.stringify(data));
-    if (userRef.current) {
+    if (userRef.current && firestoreReady.current) {
       setUserData(userRef.current.uid, { portfolio: data });
     }
   }, [data]);

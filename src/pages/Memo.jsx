@@ -44,24 +44,31 @@ export default function Memo({ classes, user, onBack }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [notifPerm, setNotifPerm] = useState(Notification.permission);
   const userRef = useRef(null);
+  const firestoreReady = useRef(false);
 
   useEffect(() => { userRef.current = user; }, [user]);
 
   // Load from Firestore when user logs in
   useEffect(() => {
     if (!user) return;
+    firestoreReady.current = false;
     getUserData(user.uid).then(data => {
-      if (data?.memos?.length > 0) {
+      if (data?.memos != null) {
         setMemos(data.memos);
         save(data.memos);
+      } else {
+        // Firestore 문서 없음 — localStorage 데이터를 초기 시드로 업로드
+        const localMemos = load();
+        if (localMemos.length > 0) setUserData(user.uid, { memos: localMemos }).catch(() => {});
       }
+      firestoreReady.current = true;
     });
   }, [user]);
 
   // Save to localStorage + Firestore
   useEffect(() => {
     save(memos);
-    if (userRef.current) {
+    if (userRef.current && firestoreReady.current) {
       setUserData(userRef.current.uid, { memos });
     }
   }, [memos]);
