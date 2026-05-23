@@ -84,10 +84,10 @@ const SECTION_META = [
 ];
 
 const FREE_MODELS = [
-  'deepseek/deepseek-v4-flash:free',
-  'meta-llama/llama-3.1-8b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
-  'qwen/qwen-2.5-7b-instruct:free',
+  'google/gemma-3-4b-it:free',
+  'microsoft/phi-4-reasoning:free',
+  'meta-llama/llama-3.2-3b-instruct:free',
+  'mistralai/mistral-small-3.1-24b-instruct:free',
 ];
 
 function loadData() {
