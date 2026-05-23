@@ -57,10 +57,16 @@ export default function Memo({ classes, user, onBack }) {
         setMemos(data.memos);
         save(data.memos);
       } else {
-        // Firestore 문서 없음 — localStorage 데이터를 초기 시드로 업로드
         const localMemos = load();
-        if (localMemos.length > 0) setUserData(user.uid, { memos: localMemos }).catch(() => {});
+        if (localMemos.length > 0) {
+          setUserData(user.uid, { memos: localMemos }).catch(e =>
+            console.error('[Firestore] memos 시드 실패:', e)
+          );
+        }
       }
+      firestoreReady.current = true;
+    }).catch(e => {
+      console.error('[Firestore] memos 불러오기 실패:', e);
       firestoreReady.current = true;
     });
   }, [user]);
@@ -69,7 +75,9 @@ export default function Memo({ classes, user, onBack }) {
   useEffect(() => {
     save(memos);
     if (userRef.current && firestoreReady.current) {
-      setUserData(userRef.current.uid, { memos });
+      setUserData(userRef.current.uid, { memos }).catch(e =>
+        console.error('[Firestore] memos 저장 실패:', e)
+      );
     }
   }, [memos]);
 

@@ -272,12 +272,18 @@ export default function Portfolio({ user }) {
         setData(merged);
         localStorage.setItem(KEY, JSON.stringify(merged));
       } else {
-        // Firestore 문서 없음 — localStorage 데이터를 초기 시드로 업로드
         const localData = loadData();
         const hasData = SECTION_META.some(m => localData[m.key]?.length > 0) ||
                         Object.values(localData.jobTarget).some(Boolean);
-        if (hasData) setUserData(user.uid, { portfolio: localData }).catch(() => {});
+        if (hasData) {
+          setUserData(user.uid, { portfolio: localData }).catch(e =>
+            console.error('[Firestore] portfolio 시드 실패:', e)
+          );
+        }
       }
+      firestoreReady.current = true;
+    }).catch(e => {
+      console.error('[Firestore] portfolio 불러오기 실패:', e);
       firestoreReady.current = true;
     });
   }, [user]);
@@ -286,7 +292,9 @@ export default function Portfolio({ user }) {
   useEffect(() => {
     localStorage.setItem(KEY, JSON.stringify(data));
     if (userRef.current && firestoreReady.current) {
-      setUserData(userRef.current.uid, { portfolio: data });
+      setUserData(userRef.current.uid, { portfolio: data }).catch(e =>
+        console.error('[Firestore] portfolio 저장 실패:', e)
+      );
     }
   }, [data]);
 

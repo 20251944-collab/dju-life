@@ -126,7 +126,9 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('dju_classes', JSON.stringify(classes));
     if (userRef.current) {
-      setUserData(userRef.current.uid, { classes });
+      setUserData(userRef.current.uid, { classes }).catch(e =>
+        console.error('[Firestore] classes 저장 실패:', e)
+      );
     }
   }, [classes]);
 
