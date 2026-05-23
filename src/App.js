@@ -93,6 +93,7 @@ export default function App() {
     typeof Notification !== 'undefined' ? Notification.permission : 'denied'
   );
   const [notifBanner, setNotifBanner] = useState(false);
+  const [migrationBanner, setMigrationBanner] = useState(false);
 
   /* ── Firebase auth listener ─────────────────────────── */
   useEffect(() => {
@@ -101,13 +102,35 @@ export default function App() {
       setUser(u);
       if (u) {
         const data = await getUserData(u.uid);
-        if (data?.classes != null) {
-          setClasses(data.classes);
+
+        if (data === null) {
+          // 첫 로그인: localStorage 데이터를 Firestore로 마이그레이션
+          const localClasses  = (() => { try { return JSON.parse(localStorage.getItem('dju_classes'))   || [];  } catch { return [];  } })();
+          const localMemos    = (() => { try { return JSON.parse(localStorage.getItem('dju_memos'))     || [];  } catch { return [];  } })();
+          const localPortfolio = (() => { try { return JSON.parse(localStorage.getItem('dju_portfolio')) || {};  } catch { return {};  } })();
+
+          await setUserData(u.uid, {
+            name:      u.displayName || '',
+            classes:   localClasses,
+            memos:     localMemos,
+            portfolio: localPortfolio,
+          });
+
+          setClasses(localClasses);
+          localStorage.removeItem('dju_classes');
+          localStorage.removeItem('dju_memos');
+          localStorage.removeItem('dju_portfolio');
+
+          const hasMigrated = localClasses.length > 0 || localMemos.length > 0 ||
+            Object.keys(localPortfolio).some(k => {
+              const v = localPortfolio[k];
+              return Array.isArray(v) ? v.length > 0 : (v && typeof v === 'object' ? Object.values(v).some(Boolean) : Boolean(v));
+            });
+          if (hasMigrated) setMigrationBanner(true);
+
         } else {
-          const local = (() => {
-            try { return JSON.parse(localStorage.getItem('dju_classes')) || []; } catch { return []; }
-          })();
-          setUserData(u.uid, { name: u.displayName || '', classes: local, memos: [], portfolio: {} });
+          // 기존 사용자: Firestore 데이터 사용
+          if (data.classes != null) setClasses(data.classes);
         }
       }
       setAuthLoading(false);
@@ -240,6 +263,17 @@ export default function App() {
       </main>
 
       <BottomTabBar active={page} onChange={setPage} />
+
+      {migrationBanner && (
+        <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 bg-green-50 border border-green-200 rounded-2xl shadow-lg px-4 py-3 flex items-start gap-3">
+          <span className="text-lg mt-0.5">☁️</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-green-800">데이터 마이그레이션 완료</p>
+            <p className="text-xs text-green-600 mt-0.5">기존 로컬 데이터를 클라우드에 저장했습니다.</p>
+          </div>
+          <button onClick={() => setMigrationBanner(false)} className="text-green-400 text-xl leading-none ml-1 flex-shrink-0">×</button>
+        </div>
+      )}
 
       {notifBanner && (
         <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 bg-yellow-50 border border-yellow-200 rounded-2xl shadow-lg px-4 py-3 flex items-start gap-3">
