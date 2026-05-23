@@ -30,6 +30,17 @@ const COLORS = [
   { bg: 'bg-amber-50',   text: 'text-amber-800',    border: 'border-amber-200',   dot: 'bg-amber-400' },
 ];
 
+const BUILDINGS_MAIN = [
+  '인문학관', '국제학관', '사회과학관', '대학원',
+  '이공학관 가동', '이공학관 나동', '이공학관 다동',
+  '중앙도서관', '예술관',
+];
+const BUILDINGS_ETC = [
+  '학생회관', '교수연구동', '파워플랜트', '대진교육관',
+  '교수회관', '본관', '박물관', '정보전산원',
+  '간호학과', '생활과학관', '소운동장', '체육관', '대운동장',
+];
+
 const EMPTY = { name: '', building: '', room: '', location: '', daySchedules: {} };
 
 function checkConflict(form, classes, editId) {
@@ -82,9 +93,18 @@ function FormModal({ form, setForm, editId, onSave, onClose, conflict }) {
           className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-navy" />
 
         <div className="grid grid-cols-2 gap-2">
-          <input placeholder="학관명 (예: 공학관)"
+          <select
             value={form.building} onChange={e => setForm(f => ({ ...f, building: e.target.value }))}
-            className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-navy" />
+            className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-navy bg-white"
+          >
+            <option value="">학관명 선택</option>
+            <optgroup label="수업 주요 건물">
+              {BUILDINGS_MAIN.map(b => <option key={b} value={b}>{b}</option>)}
+            </optgroup>
+            <optgroup label="기타 건물">
+              {BUILDINGS_ETC.map(b => <option key={b} value={b}>{b}</option>)}
+            </optgroup>
+          </select>
           <input placeholder="강의실 번호 (예: 301)"
             value={form.room} onChange={e => setForm(f => ({ ...f, room: e.target.value }))}
             className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-navy" />
